@@ -1,0 +1,48 @@
+USE evaluacion_db;
+
+-- Borrar tablas si ya existen (en orden inverso para respetar las llaves foráneas)
+DROP TABLE IF EXISTS solicitudes;
+DROP TABLE IF EXISTS clientes;
+DROP TABLE IF EXISTS empleados;
+DROP TABLE IF EXISTS administradores;
+DROP TABLE IF EXISTS usuarios;
+
+-- Crear tabla usuarios
+CREATE TABLE usuarios (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nombre      VARCHAR(100) NOT NULL,
+    correo      VARCHAR(150) NOT NULL UNIQUE
+);
+
+-- Crear tabla administradores
+CREATE TABLE administradores (
+    id            BIGINT PRIMARY KEY,
+    nivel_acceso  INT NOT NULL CHECK (nivel_acceso BETWEEN 1 AND 5),
+    FOREIGN KEY (id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Crear tabla empleados
+CREATE TABLE empleados (
+    id       BIGINT PRIMARY KEY,
+    cargo    VARCHAR(100) NOT NULL,
+    salario  DOUBLE NOT NULL CHECK (salario > 0),
+    FOREIGN KEY (id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Crear tabla clientes
+CREATE TABLE clientes (
+    id                BIGINT PRIMARY KEY,
+    puntos_fidelidad  INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Crear tabla solicitudes
+CREATE TABLE solicitudes (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    titulo          VARCHAR(150) NOT NULL,
+    descripcion     TEXT,
+    estado          VARCHAR(30) NOT NULL DEFAULT 'PENDIENTE',
+    fecha_creacion  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cliente_id      BIGINT NOT NULL,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+);

@@ -1,10 +1,12 @@
+
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 @Entity
-@Table(name = "empleado")
+@Table(name = "empleados")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -12,6 +14,8 @@ import lombok.*;
 public class Empleado extends Usuario {
 
     private String cargo;
+
+    @Positive(message = "El salario debe ser mayor que cero")
     private Double salario;
 
     @Override
@@ -19,3 +23,4 @@ public class Empleado extends Usuario {
         return "Empleado con cargo: " + cargo + " y salario: " + salario;
     }
 }
+

@@ -1,37 +1,46 @@
+
 package com.example.demo.controller;
 
 import com.example.demo.entity.Solicitud;
-import com.example.demo.repository.SolicitudRepository;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
+import com.example.demo.service.GestorSolicitudes;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/solicitudes")
+@RequestMapping("/api/solicitudes")
 public class SolicitudController {
 
-    private final SolicitudRepository solicitudRepository;
+    private final GestorSolicitudes gestorSolicitudes;
 
-    public SolicitudController(SolicitudRepository solicitudRepository) {
-        this.solicitudRepository = solicitudRepository;
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Solicitud crearSolicitud(@Valid @RequestBody Solicitud solicitud) {
-        return solicitudRepository.save(solicitud);
+    public SolicitudController(GestorSolicitudes gestorSolicitudes) {
+        this.gestorSolicitudes = gestorSolicitudes;
     }
 
     @GetMapping
     public List<Solicitud> listarSolicitudes() {
-        return solicitudRepository.findAll();
+        return gestorSolicitudes.listarSolicitudes();
     }
 
-    @GetMapping("/{id}")
-    public Solicitud buscarSolicitud(@PathVariable Long id) {
-        return solicitudRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        "No existe una solicitud con el ID " + id));
+    @PostMapping("/registrar")
+    public String registrarSolicitud(@RequestBody Solicitud solicitud) {
+        return gestorSolicitudes.registrarSolicitud(solicitud);
+    }
+
+    @PostMapping("/procesar")
+    public String procesarSolicitudes() {
+        gestorSolicitudes.procesarSolicitudes();
+        return "Procesamiento de solicitudes finalizado.";
+    }
+
+    @GetMapping("/historial")
+    public void mostrarHistorial() {
+        gestorSolicitudes.mostrarHistorial();
+    }
+
+    @PostMapping("/opcion/{opcion}")
+    public String ejecutarOpcion(@PathVariable int opcion) {
+        gestorSolicitudes.ejecutarOpcion(opcion);
+        return "Operación ejecutada.";
     }
 }

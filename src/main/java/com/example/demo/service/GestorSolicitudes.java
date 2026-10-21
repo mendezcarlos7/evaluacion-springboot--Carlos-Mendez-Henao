@@ -1,7 +1,10 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.Solicitud;
+import com.example.demo.repository.SolicitudRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -12,37 +15,69 @@ import java.util.Stack;
 @Component
 public class GestorSolicitudes {
 
-    // LISTA: almacena las solicitudes registradas en el gestor
+    private final SolicitudRepository solicitudRepository;
+
+    // LISTA: almacena las solicitudes consultadas de la base de datos
     private final List<Solicitud> solicitudes = new ArrayList<>();
 
     // COLA: procesa solicitudes en orden de llegada
     private final Queue<Solicitud> colaSolicitudes = new LinkedList<>();
 
-    // PILA: registra las acciones más recientes
-    private final Stack<String> historial = new Stack<>();
+    // PILA: registra las solicitudes de las operaciones recientes
+    private final Stack<Solicitud> historial = new Stack<>();
 
-    // Registrar y validar una solicitud
-    public String registrarSolicitud(Solicitud solicitud) {
+    public GestorSolicitudes(SolicitudRepository solicitudRepository) {
+        this.solicitudRepository = solicitudRepository;
 
-        if (solicitud == null) {
-            return "Error: la solicitud no puede ser nula.";
-        } else if (solicitud.getTitulo() == null
-                || solicitud.getTitulo().trim().isEmpty()) {
-            return "Error: el título es obligatorio.";
-        } else {
-            solicitudes.add(solicitud);
-            colaSolicitudes.offer(solicitud);
+        // Cargar las solicitudes que ya existen en la base de datos
+        List<Solicitud> existentes = solicitudRepository.findAll();
+        solicitudes.addAll(existentes);
 
-            historial.push(
-                    "Se registró la solicitud: " + solicitud.getTitulo()
-            );
-
-            return "Solicitud agregada correctamente.";
+        // Agregar a la cola las solicitudes pendientes
+        for (Solicitud solicitud : existentes) {
+            if ("PENDIENTE".equalsIgnoreCase(solicitud.getEstado())) {
+                colaSolicitudes.offer(solicitud);
+            }
         }
     }
 
-    // Consultar todas las solicitudes
+    // Registrar y persistir una solicitud
+    public String registrarSolicitud(Solicitud solicitud) {
+
+        if (solicitud == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Los datos de la solicitud son obligatorios."
+            );
+        } else if (solicitud.getTitulo() == null
+                || solicitud.getTitulo().trim().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El título de la solicitud es obligatorio."
+            );
+        } else if (solicitud.getCliente() == null
+                || solicitud.getCliente().getId() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Debe indicar un cliente existente para la solicitud."
+            );
+        } else {
+            Solicitud guardada = solicitudRepository.save(solicitud);
+
+            solicitudes.add(guardada);
+            colaSolicitudes.offer(guardada);
+            historial.push(guardada);
+
+            return "Solicitud registrada correctamente con ID: "
+                    + guardada.getId();
+        }
+    }
+
+    // Consultar las solicitudes
     public List<Solicitud> listarSolicitudes() {
+        solicitudes.clear();
+        solicitudes.addAll(solicitudRepository.findAll());
+
         return new ArrayList<>(solicitudes);
     }
 
@@ -57,10 +92,7 @@ public class GestorSolicitudes {
                 Solicitud solicitud = colaSolicitudes.poll();
 
                 if (solicitud != null) {
-                    historial.push(
-                            "Se procesó la solicitud: "
-                                    + solicitud.getTitulo()
-                    );
+                    historial.push(solicitud);
 
                     System.out.println(
                             "Solicitud procesada: "
@@ -71,14 +103,20 @@ public class GestorSolicitudes {
         }
     }
 
-    // Mostrar historial: primero la acción más reciente
+    // Mostrar historial, primero la solicitud más reciente
     public void mostrarHistorial() {
 
         if (historial.isEmpty()) {
             System.out.println("El historial está vacío.");
         } else {
             for (int i = historial.size() - 1; i >= 0; i--) {
-                System.out.println(historial.get(i));
+                Solicitud solicitud = historial.get(i);
+
+                System.out.println(
+                        "ID: " + solicitud.getId()
+                                + " | Título: " + solicitud.getTitulo()
+                                + " | Estado: " + solicitud.getEstado()
+                );
             }
         }
     }
@@ -90,7 +128,7 @@ public class GestorSolicitudes {
             case 1:
                 System.out.println("Lista de solicitudes:");
 
-                for (Solicitud solicitud : solicitudes) {
+                for (Solicitud solicitud : listarSolicitudes()) {
                     System.out.println(
                             "ID: " + solicitud.getId()
                                     + " | Título: " + solicitud.getTitulo()
@@ -117,4 +155,3 @@ public class GestorSolicitudes {
         }
     }
 }
-
